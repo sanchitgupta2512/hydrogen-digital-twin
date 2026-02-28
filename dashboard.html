@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Hydrogen Digital Twin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+    <div class="header">
+        <h1>🔬 Virtual Commissioning Digital Twin</h1>
+        <p>Green Hydrogen Plant - Decision Validation Platform</p>
+        <div class="status"><span class="dot"></span> Live Simulation</div>
+    </div>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Control Panel</h2>
+            
+            <div class="control">
+                <label>Solar Power (MW): <span id="solar-val">60</span></label>
+                <input type="range" id="solar" min="0" max="100" value="60">
+            </div>
+            
+            <div class="control">
+                <label>Wind Power (MW): <span id="wind-val">40</span></label>
+                <input type="range" id="wind" min="0" max="80" value="40">
+            </div>
+            
+            <div class="control">
+                <label>Grid Backup (MW): <span id="grid-val">0</span></label>
+                <input type="range" id="grid" min="0" max="50" value="0">
+            </div>
+            
+            <div class="control">
+                <label>Electrolyzer Load (%): <span id="load-val">80</span></label>
+                <input type="range" id="load" min="20" max="100" value="80">
+            </div>
+            
+            <div class="control">
+                <label>Operating Mode:</label>
+                <select id="mode">
+                    <option value="optimal">Optimal Efficiency</option>
+                    <option value="cost">Cost Minimized</option>
+                    <option value="carbon">Carbon Minimized</option>
+                </select>
+            </div>
+            
+            <button id="run-btn" class="btn-run">▶ Run Scenario</button>
+            <button id="reset-btn" class="btn-reset">🔄 Reset</button>
+            <button id="emergency-btn" class="btn-emergency">🚨 Emergency Stop</button>
+            
+            <div class="timer">Simulation Time: <span id="timer">00:00:00</span></div>
+        </div>
+
+        <div class="main-content">
+            <div class="plant-flow">
+                <h3>Plant Process Flow</h3>
+                <div class="flow-item">⚡ Power Conditioning<br><span id="power-cond">98 MW</span><br>98% Efficiency</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-item">🔬 Electrolyzer<br><span id="h2-prod">1,680 kg/hr</span><br>Operating Normal</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-item">💨 Separation & Drying<br>99.95%<br>H₂ Purity OK</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-item">🔧 Compression<br><span id="pressure">350 bar</span><br>Stage 3 Active</div>
+                <div class="flow-arrow">→</div>
+                <div class="flow-item">🔋 High-P Storage<br><span id="storage">65%</span><br><span id="storage-kg">2,100 kg</span></div>
+            </div>
+
+            <div class="metrics-grid">
+                <div class="metric">
+                    <div class="metric-title">Stack Temperature</div>
+                    <div class="metric-value" id="temp">72.5 °C</div>
+                    <div class="metric-range">Range: 60-85°C</div>
+                    <div class="status-normal">● Normal</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-title">Stack Pressure</div>
+                    <div class="metric-value" id="stack-pressure">28.5 bar</div>
+                    <div class="metric-range">Range: 15-35 bar</div>
+                    <div class="status-normal">● Normal</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-title">H₂ Flow Rate</div>
+                    <div class="metric-value" id="flow">1680 kg/hr</div>
+                    <div class="metric-range">Max: 2100 kg/hr</div>
+                    <div class="status-normal">● Normal</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-title">Energy Efficiency</div>
+                    <div class="metric-value" id="efficiency">68.2 %</div>
+                    <div class="metric-range">Target: >65%</div>
+                    <div class="status-optimal">● Optimal</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-title">Specific Energy</div>
+                    <div class="metric-value" id="specific">52.3 kWh/kg</div>
+                    <div class="metric-range">Target: <55 kWh/kg</div>
+                    <div class="status-optimal">● Efficient</div>
+                </div>
+                
+                <div class="metric">
+                    <div class="metric-title">Carbon Intensity</div>
+                    <div class="metric-value" id="carbon">0.2 kgCO₂/kg</div>
+                    <div class="metric-range">Target: <0.5</div>
+                    <div class="status-optimal">● Green</div>
+                </div>
+            </div>
+
+            <div class="charts">
+                <div class="chart-box">
+                    <h3>Power Mix & H₂ Production</h3>
+                    <canvas id="chart1"></canvas>
+                </div>
+                <div class="chart-box">
+                    <h3>System Performance</h3>
+                    <canvas id="chart2"></canvas>
+                </div>
+            </div>
+
+            <div class="kpi">
+                <h3>Key Performance Indicators</h3>
+                <p><strong>Today's Production:</strong> <span id="prod">38.2 tonnes</span> (+5.2% vs target)</p>
+                <p><strong>Capacity Factor:</strong> <span id="capacity">82.5%</span> (+3.1% vs last week)</p>
+                <p><strong>Operating Cost:</strong> <span id="cost">₹3.45/kg</span> (-8% vs baseline)</p>
+                <p><strong>Equipment Health:</strong> 94% (No degradation)</p>
+            </div>
+
+            <div class="alerts">
+                <h3>System Alerts & Notifications</h3>
+                <div id="log">
+                    <div class="log-entry">14:23 System operating within optimal parameters</div>
+                    <div class="log-entry">14:15 Renewable power availability increased to 140 MW</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        Virtual Commissioning Platform | CHEM-AI-THON 2.0 | Real-time simulation running
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
