@@ -110,6 +110,24 @@
                     <div class="metric-range">Target: <0.5</div>
                     <div class="status-optimal">● Green</div>
                 </div>
+                <div class="metric">
+                    <div class="metric-title">💧 Water Consumption</div>
+                    <div class="metric-value" id="water-consumption">9.5 L/kg</div>
+                    <div class="metric-range">Target: <10 L/kg</div>
+                    <div class="status-optimal">● Efficient</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-title">🔥 Waste Heat</div>
+                    <div class="metric-value" id="waste-heat">35.2 MW</div>
+                    <div class="metric-range">Cooling Capacity: 50 MW</div>
+                    <div class="status-normal">● Normal</div>
+                </div>
+                <div class="metric">
+                    <div class="metric-title">💰 LCOH</div>
+                    <div class="metric-value" id="lcoh">₹285/kg</div>
+                    <div class="metric-range">Target: <₹300/kg</div>
+                    <div class="status-optimal">● Competitive</div>
+                </div>
             </div>
 
             <div class="charts">
@@ -128,7 +146,16 @@
                 <p><strong>Today's Production:</strong> <span id="prod">38.2 tonnes</span> (+5.2% vs target)</p>
                 <p><strong>Capacity Factor:</strong> <span id="capacity">82.5%</span> (+3.1% vs last week)</p>
                 <p><strong>Operating Cost:</strong> <span id="cost">₹3.45/kg</span> (-8% vs baseline)</p>
-                <p><strong>Equipment Health:</strong> 94% (No degradation)</p>
+                <p><strong>LCOH Breakdown:</strong></p>
+                <div class="lcoh-breakdown">
+                    <span>⚡ Electricity: <span id="elec-percent">75%</span></span> | 
+                    <span>💧 Water: <span id="water-percent">8%</span></span> | 
+                    <span>🔧 Maintenance: <span id="maint-percent">12%</span></span> | 
+                    <span>👷 Labor: <span id="labor-percent">5%</span></span>
+                </div>
+                <p><strong>Equipment Health:</strong> <span id="equipment-health">100%</span> <span id="health-status">(Excellent)</span></p>
+                <p><strong>Active Alarms:</strong> <span id="alarm-count" class="alarm-badge">0</span></p>
+                <div id="alarm-panel" class="alarm-container"></div>
             </div>
 
             <div class="alerts">
