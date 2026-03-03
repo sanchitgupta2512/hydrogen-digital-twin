@@ -328,3 +328,100 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+.operating-hours {
+    margin-top: 15px;
+    padding: 12px;
+    background: #F1F5F9;
+    border-radius: 5px;
+    text-align: center;
+    font-size: 13px;
+    color: #1E3A5F;
+}
+
+.lcoh-breakdown {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 10px;
+    background: #F1F5F9;
+    border-radius: 5px;
+    font-size: 12px;
+}
+
+.alarm-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    background: #10B981;
+    color: white;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 10px;
+}
+
+.alarm-badge.has-alarms {
+    background: #DC2626;
+    animation: pulse-alarm 1s infinite;
+}
+
+@keyframes pulse-alarm {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.alarm-container {
+    margin-top: 10px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.alarm-item {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    border-radius: 5px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.alarm-critical {
+    background: #FEE2E2;
+    border-left: 4px solid #DC2626;
+    color: #991B1B;
+}
+
+.alarm-warning {
+    background: #FEF3C7;
+    border-left: 4px solid #F59E0B;
+    color: #92400E;
+}
+
+.alarm-info {
+    background: #DBEAFE;
+    border-left: 4px solid #0891B2;
+    color: #0369A1;
+}
+
+.status-indicator {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-indicator.status-normal {
+    color: #10B981;
+}
+
+.status-indicator.status-warning {
+    color: #F59E0B;
+}
+
+.status-indicator.status-critical {
+    color: #DC2626;
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
