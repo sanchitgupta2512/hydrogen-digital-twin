@@ -52,6 +52,9 @@
             <button id="emergency-btn" class="btn-emergency">🚨 Emergency Stop</button>
             
             <div class="timer">Simulation Time: <span id="timer">00:00:00</span></div>
+            <div class="operating-hours">
+                <strong>Operating Hours:</strong> <span id="op-hours">0</span> hrs
+            </div>
         </div>
 
         <div class="main-content">
@@ -73,21 +76,21 @@
                     <div class="metric-title">Stack Temperature</div>
                     <div class="metric-value" id="temp">72.5 °C</div>
                     <div class="metric-range">Range: 60-85°C</div>
-                    <div class="status-normal">● Normal</div>
+                    <div class="status-indicator" id="temp-status">● Normal</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">Stack Pressure</div>
                     <div class="metric-value" id="stack-pressure">28.5 bar</div>
                     <div class="metric-range">Range: 15-35 bar</div>
-                    <div class="status-normal">● Normal</div>
+                    <div class="status-indicator" id="temp-status">● Normal</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">H₂ Flow Rate</div>
                     <div class="metric-value" id="flow">1680 kg/hr</div>
                     <div class="metric-range">Max: 2100 kg/hr</div>
-                    <div class="status-normal">● Normal</div>
+                    <div class="status-indicator" id="temp-status">● Normal</div>
                 </div>
                 
                 <div class="metric">
@@ -120,7 +123,7 @@
                     <div class="metric-title">🔥 Waste Heat</div>
                     <div class="metric-value" id="waste-heat">35.2 MW</div>
                     <div class="metric-range">Cooling Capacity: 50 MW</div>
-                    <div class="status-normal">● Normal</div>
+                    <div class="status-indicator" id="temp-status">● Normal</div>
                 </div>
                 <div class="metric">
                     <div class="metric-title">💰 LCOH</div>
