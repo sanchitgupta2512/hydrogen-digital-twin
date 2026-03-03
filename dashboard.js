@@ -6,7 +6,10 @@ let state = {
     wind: 40,
     grid: 0,
     load: 80,
-    mode: 'optimal'
+    mode: 'optimal',
+    operatingHours: 0,
+    degradation: 0,
+    alarms: []
 };
 
 let interval;
@@ -67,6 +70,7 @@ function runSimulation() {
     
     interval = setInterval(() => {
         state.time++;
+        state.operatingHours = state.time / 3600;
         updateTimer();
         
         // Add variability
@@ -167,6 +171,228 @@ function updateDisplay() {
     document.getElementById('prod').textContent = production + ' tonnes';
     document.getElementById('capacity').textContent = capacity + '%';
     document.getElementById('cost').textContent = '₹' + cost + '/kg';
+
+    // NEW: Professional calculations
+    
+    // Water consumption
+    const waterConsumption = calculateWaterConsumption(h2Production);
+    document.getElementById('water-consumption').textContent = (waterConsumption / h2Production).toFixed(1) + ' L/kg';
+    
+    // Waste heat
+    const wasteHeat = calculateWasteHeat(totalPower, h2Production / 1000); // Convert kg to tonnes
+    document.getElementById('waste-heat').textContent = wasteHeat.toFixed(1) + ' MW';
+    
+    // LCOH
+    const lcohData = calculateLCOH(totalPower, h2Production, efficiency);
+    document.getElementById('lcoh').textContent = '₹' + lcohData.lcoh.toFixed(0) + '/kg';
+    
+    // LCOH Breakdown
+    document.getElementById('elec-percent').textContent = lcohData.breakdown.electricity.toFixed(0) + '%';
+    document.getElementById('water-percent').textContent = lcohData.breakdown.water.toFixed(0) + '%';
+    document.getElementById('maint-percent').textContent = lcohData.breakdown.maintenance.toFixed(0) + '%';
+    document.getElementById('labor-percent').textContent = lcohData.breakdown.labor.toFixed(0) + '%';
+    
+    // Equipment health
+    const degradation = calculateDegradation(state.operatingHours);
+    const health = 100 - degradation;
+    document.getElementById('equipment-health').textContent = health.toFixed(1) + '%';
+    
+    let healthStatus = '(Excellent)';
+    if (health < 90) healthStatus = '(Good)';
+    if (health < 85) healthStatus = '(Fair)';
+    if (health < 80) healthStatus = '(Poor)';
+    document.getElementById('health-status').textContent = healthStatus;
+    
+    // Operating hours
+    document.getElementById('op-hours').textContent = state.operatingHours.toFixed(1);
+    
+    // Safety alarms
+    const purity = parseFloat(document.getElementById('carbon').textContent);
+    const alarms = checkSafetyAlarms(temp, pressure, purity, efficiency);
+    updateAlarmDisplay(alarms);
+    
+    // Status indicators
+    updateStatusIndicators(temp, pressure, efficiency);
+}
+
+// ========================================
+// NEW PROFESSIONAL CALCULATIONS
+// ========================================
+
+function calculateWaterConsumption(h2Production) {
+    // Stoichiometric: 9 kg water per kg H2
+    // Real systems: 95% efficiency
+    const theoretical = h2Production * 9;
+    const actual = theoretical / 0.95;
+    return actual; // L/hr (assuming 1 kg = 1 L for water)
+}
+
+function calculateWasteHeat(powerIn, h2Production) {
+    // Energy balance: Power in - H2 energy out = Waste heat
+    const h2Energy = h2Production * 33.3; // kWh/kg (LHV)
+    const wasteHeat = powerIn - h2Energy;
+    return Math.max(0, wasteHeat); // MW
+}
+
+function calculateLCOH(totalPower, h2Production, efficiency) {
+    // Simplified LCOH calculation
+    
+    // CAPEX (one-time costs spread over lifetime)
+    const electrolyzerCAPEX = 100 * 80000; // 100 MW × ₹80k/kW
+    const bopCAPEX = electrolyzerCAPEX * 0.4;
+    const totalCAPEX = electrolyzerCAPEX + bopCAPEX;
+    
+    // Annual costs
+    const hoursPerYear = 8760;
+    const electricityCost = totalPower * hoursPerYear * 4.5; // ₹4.5/kWh
+    const waterCost = h2Production * 9.5 * 365 * 24 * 0.05; // ₹0.05/L
+    const maintenanceCost = totalCAPEX * 0.03; // 3% of CAPEX
+    const laborCost = 5 * 800000; // 5 operators
+    
+    const totalOPEX = electricityCost + waterCost + maintenanceCost + laborCost;
+    
+    // LCOH (simplified - 20 year lifetime, 8% discount rate)
+    const annualProduction = h2Production * hoursPerYear;
+    const annualizedCAPEX = totalCAPEX * 0.1; // Simplified
+    const lcoh = (annualizedCAPEX + totalOPEX) / annualProduction;
+    
+    // Breakdown percentages
+    const breakdown = {
+        electricity: (electricityCost / totalOPEX) * 100,
+        water: (waterCost / totalOPEX) * 100,
+        maintenance: (maintenanceCost / totalOPEX) * 100,
+        labor: (laborCost / totalOPEX) * 100
+    };
+    
+    return { lcoh, breakdown };
+}
+
+function calculateDegradation(operatingHours) {
+    // Stack degrades 0.5% per 1000 hours
+    const degradationPercent = (operatingHours / 1000) * 0.5;
+    return Math.min(degradationPercent, 10); // Cap at 10%
+}
+
+function checkSafetyAlarms(temp, pressure, purity, efficiency) {
+    let alarms = [];
+    
+    // Temperature alarms
+    if (temp > 90) {
+        alarms.push({
+            level: 'critical',
+            message: '🔥 CRITICAL: Stack temperature exceeds 90°C - Immediate shutdown required',
+            param: 'temperature'
+        });
+    } else if (temp > 85) {
+        alarms.push({
+            level: 'warning',
+            message: '⚠️ WARNING: Stack temperature above 85°C - Reduce load',
+            param: 'temperature'
+        });
+    }
+    
+    // Pressure alarms
+    if (pressure > 40) {
+        alarms.push({
+            level: 'critical',
+            message: '🔥 CRITICAL: Stack pressure exceeds safe limit',
+            param: 'pressure'
+        });
+    } else if (pressure > 35) {
+        alarms.push({
+            level: 'warning',
+            message: '⚠️ WARNING: Stack pressure approaching limit',
+            param: 'pressure'
+        });
+    }
+    
+    // Purity alarms
+    if (purity < 99.5) {
+        alarms.push({
+            level: 'critical',
+            message: '🔥 CRITICAL: H₂ purity below specification',
+            param: 'purity'
+        });
+    } else if (purity < 99.9) {
+        alarms.push({
+            level: 'warning',
+            message: '⚠️ WARNING: H₂ purity trending low',
+            param: 'purity'
+        });
+    }
+    
+    // Efficiency alarms
+    if (efficiency < 60) {
+        alarms.push({
+            level: 'warning',
+            message: '⚠️ WARNING: System efficiency below target',
+            param: 'efficiency'
+        });
+    }
+    
+    return alarms;
+}
+
+function updateAlarmDisplay(alarms) {
+    const alarmCount = document.getElementById('alarm-count');
+    const alarmPanel = document.getElementById('alarm-panel');
+    
+    // Update count
+    alarmCount.textContent = alarms.length;
+    
+    if (alarms.length > 0) {
+        alarmCount.classList.add('has-alarms');
+    } else {
+        alarmCount.classList.remove('has-alarms');
+    }
+    
+    // Update alarm list
+    if (alarms.length === 0) {
+        alarmPanel.innerHTML = '<div class="alarm-item alarm-info">✅ All systems normal</div>';
+    } else {
+        alarmPanel.innerHTML = alarms.map(alarm => 
+            `<div class="alarm-item alarm-${alarm.level}">${alarm.message}</div>`
+        ).join('');
+    }
+}
+
+function updateStatusIndicators(temp, pressure, efficiency) {
+    // Temperature status
+    const tempStatus = document.getElementById('temp-status');
+    if (temp > 85) {
+        tempStatus.textContent = '● Critical';
+        tempStatus.className = 'status-indicator status-critical';
+    } else if (temp > 80) {
+        tempStatus.textContent = '● Warning';
+        tempStatus.className = 'status-indicator status-warning';
+    } else {
+        tempStatus.textContent = '● Normal';
+        tempStatus.className = 'status-indicator status-normal';
+    }
+    
+    // Pressure status
+    const pressureStatus = document.getElementById('pressure-status');
+    const pressureVal = parseFloat(document.getElementById('stack-pressure').textContent);
+    if (pressureVal > 35) {
+        pressureStatus.textContent = '● Warning';
+        pressureStatus.className = 'status-indicator status-warning';
+    } else {
+        pressureStatus.textContent = '● Normal';
+        pressureStatus.className = 'status-indicator status-normal';
+    }
+    
+    // Efficiency status
+    const effStatus = document.getElementById('eff-status');
+    if (efficiency < 60) {
+        effStatus.textContent = '● Poor';
+        effStatus.className = 'status-indicator status-warning';
+    } else if (efficiency > 68) {
+        effStatus.textContent = '● Optimal';
+        effStatus.className = 'status-indicator status-optimal';
+    } else {
+        effStatus.textContent = '● Normal';
+        effStatus.className = 'status-indicator status-normal';
+    }
 }
 
 // Update Timer
