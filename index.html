@@ -83,53 +83,53 @@
                     <div class="metric-title">Stack Pressure</div>
                     <div class="metric-value" id="stack-pressure">28.5 bar</div>
                     <div class="metric-range">Range: 15-35 bar</div>
-                    <div class="status-indicator" id="temp-status">● Normal</div>
+                    <div class="status-indicator" id="pressure-status">● Normal</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">H₂ Flow Rate</div>
                     <div class="metric-value" id="flow">1680 kg/hr</div>
                     <div class="metric-range">Max: 2100 kg/hr</div>
-                    <div class="status-indicator" id="temp-status">● Normal</div>
+                    <div class="status-indicator" id="flow-status">● Normal</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">Energy Efficiency</div>
                     <div class="metric-value" id="efficiency">68.2 %</div>
                     <div class="metric-range">Target: >65%</div>
-                    <div class="status-optimal">● Optimal</div>
+                    <div class="status-optimal" id="eff-status">● Optimal</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">Specific Energy</div>
                     <div class="metric-value" id="specific">52.3 kWh/kg</div>
                     <div class="metric-range">Target: <55 kWh/kg</div>
-                    <div class="status-optimal">● Efficient</div>
+                    <div class="status-optimal" id="spec-status">● Efficient</div>
                 </div>
                 
                 <div class="metric">
                     <div class="metric-title">Carbon Intensity</div>
                     <div class="metric-value" id="carbon">0.2 kgCO₂/kg</div>
                     <div class="metric-range">Target: <0.5</div>
-                    <div class="status-optimal">● Green</div>
+                    <div class="status-optimal" id="carbon-status">● Green</div>
                 </div>
                 <div class="metric">
                     <div class="metric-title">💧 Water Consumption</div>
                     <div class="metric-value" id="water-consumption">9.5 L/kg</div>
                     <div class="metric-range">Target: <10 L/kg</div>
-                    <div class="status-optimal">● Efficient</div>
+                    <div class="status-optimal" id="water-status">● Efficient</div>
                 </div>
                 <div class="metric">
                     <div class="metric-title">🔥 Waste Heat</div>
                     <div class="metric-value" id="waste-heat">35.2 MW</div>
                     <div class="metric-range">Cooling Capacity: 50 MW</div>
-                    <div class="status-indicator" id="temp-status">● Normal</div>
+                    <div class="status-indicator" id="heat-status">● Normal</div>
                 </div>
                 <div class="metric">
                     <div class="metric-title">💰 LCOH</div>
                     <div class="metric-value" id="lcoh">₹285/kg</div>
                     <div class="metric-range">Target: <₹300/kg</div>
-                    <div class="status-optimal">● Competitive</div>
+                    <div class="status-optimal" id="lcoh-status">● Competitive</div>
                 </div>
             </div>
 
@@ -149,6 +149,7 @@
                 <p><strong>Today's Production:</strong> <span id="prod">38.2 tonnes</span> (+5.2% vs target)</p>
                 <p><strong>Capacity Factor:</strong> <span id="capacity">82.5%</span> (+3.1% vs last week)</p>
                 <p><strong>Operating Cost:</strong> <span id="cost">₹3.45/kg</span> (-8% vs baseline)</p>
+                <p><strong>Equipment Health:</strong> <span id="equipment-health">100%</span> <span id="health-status">(Excellent)</span></p>
                 <p><strong>LCOH Breakdown:</strong></p>
                 <div class="lcoh-breakdown">
                     <span>⚡ Electricity: <span id="elec-percent">75%</span></span> | 
@@ -156,7 +157,6 @@
                     <span>🔧 Maintenance: <span id="maint-percent">12%</span></span> | 
                     <span>👷 Labor: <span id="labor-percent">5%</span></span>
                 </div>
-                <p><strong>Equipment Health:</strong> <span id="equipment-health">100%</span> <span id="health-status">(Excellent)</span></p>
                 <p><strong>Active Alarms:</strong> <span id="alarm-count" class="alarm-badge">0</span></p>
                 <div id="alarm-panel" class="alarm-container"></div>
             </div>
