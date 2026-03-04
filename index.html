@@ -52,12 +52,52 @@
             <button id="emergency-btn" class="btn-emergency">🚨 Emergency Stop</button>
             
             <div class="timer">Simulation Time: <span id="timer">00:00:00</span></div>
+            <!-- NEW: Data Import Section -->
+            <div class="data-import-section">
+                <h3>📊 Import Data</h3>
+                <input type="file" id="csv-upload" accept=".csv" class="file-input">
+                <button id="load-data-btn" class="btn-secondary">Load CSV</button>
+                <div id="data-status" class="data-status"></div>
+            </div>
             <div class="operating-hours">
                 <strong>Operating Hours:</strong> <span id="op-hours">0</span> hrs
             </div>
         </div>
 
         <div class="main-content">
+            <!-- NEW: AI Features Panel -->
+            <div class="ai-features-panel">
+                <div class="ai-feature-card">
+                    <h3>🔍 Anomaly Detection System</h3>
+                    <div class="anomaly-display">
+                        <div class="anomaly-status" id="anomaly-status">
+                            <span class="status-indicator-ai" id="anomaly-indicator">● NORMAL</span>
+                        </div>
+                        <div class="anomaly-score-display">
+                            Anomaly Score: <span id="anomaly-score">0.00</span>
+                            <div class="score-bar">
+                                <div class="score-fill" id="score-fill" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        <div id="anomaly-details" class="anomaly-details">
+                            All parameters within normal range
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="ai-feature-card">
+                    <h3>💡 AI Optimization Advisor</h3>
+                    <div class="recommendation-display">
+                        <div class="rec-header" id="rec-header">
+                            🤖 Analyzing current conditions...
+                        </div>
+                        <div class="rec-content" id="rec-content">
+                            Waiting for simulation data
+                        </div>
+                        <div class="rec-impact" id="rec-impact"></div>
+                    </div>
+                </div>
+            </div>
             <div class="plant-flow">
                 <h3>Plant Process Flow</h3>
                 <div class="flow-item">⚡ Power Conditioning<br><span id="power-cond">98 MW</span><br>98% Efficiency</div>
