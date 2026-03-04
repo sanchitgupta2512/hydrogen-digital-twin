@@ -9,7 +9,11 @@ let state = {
     mode: 'optimal',
     operatingHours: 0,
     degradation: 0,
-    alarms: []
+    alarms: [],
+    // NEW: AI Features
+    importedData: null,
+    dataHistory: [],
+    anomalyThreshold: 0.7
 };
 
 let interval;
@@ -59,6 +63,11 @@ function setupControls() {
     document.getElementById('run-btn').addEventListener('click', runSimulation);
     document.getElementById('reset-btn').addEventListener('click', resetSimulation);
     document.getElementById('emergency-btn').addEventListener('click', emergencyStop);
+
+    // NEW: Data Import Handler
+    document.getElementById('load-data-btn').addEventListener('click', handleDataUpload);
+
+    
 }
 
 // Run Simulation
@@ -213,6 +222,54 @@ function updateDisplay() {
     
     // Status indicators
     updateStatusIndicators(temp, pressure, efficiency);
+
+    // NEW: AI Features Integration
+    
+    // Get current values
+    const currentTemp = parseFloat(document.getElementById('temp').textContent);
+    const currentPressure = parseFloat(document.getElementById('stack-pressure').textContent);
+    const currentFlow = parseFloat(document.getElementById('flow').textContent);
+    const currentPurity = 99.97; // From display
+    
+    // Store data history (for anomaly detection)
+    state.dataHistory.push({
+        time: state.time,
+        temp: currentTemp,
+        pressure: currentPressure,
+        efficiency: efficiency,
+        flow: currentFlow
+    });
+    
+    // Keep only last 50 data points
+    if (state.dataHistory.length > 50) {
+        state.dataHistory.shift();
+    }
+    
+    // Run anomaly detection (only if simulation running)
+    if (state.running) {
+        const anomalyResult = detectAnomalies(
+            currentTemp,
+            currentPressure,
+            efficiency,
+            currentFlow,
+            currentPurity
+        );
+        updateAnomalyDisplay(anomalyResult);
+    }
+    
+    // Generate optimization recommendation (every 5 seconds)
+    if (state.time % 5 === 0 && state.running) {
+        const recommendation = generateOptimizationRecommendation({
+            solar: state.solar,
+            wind: state.wind,
+            grid: state.grid,
+            load: state.load,
+            efficiency: efficiency,
+            cost: cost,
+            carbon: parseFloat(document.getElementById('carbon').textContent)
+        });
+        updateOptimizationDisplay(recommendation);
+    }
 }
 
 // ========================================
@@ -426,6 +483,341 @@ function addLog(message) {
     }
 }
 
+// ========================================
+// CSV DATA IMPORT
+// ========================================
+
+function handleDataUpload() {
+    const fileInput = document.getElementById('csv-upload');
+    const file = fileInput.files[0];
+    
+    if (!file) {
+        showDataStatus('Please select a CSV file', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        try {
+            const text = e.target.result;
+            const data = parseCSV(text);
+            
+            state.importedData = data;
+            showDataStatus(`✅ Loaded ${data.length} data points`, 'success');
+            addLog('CSV data imported successfully');
+            
+            // Analyze imported data
+            analyzeImportedData(data);
+            
+        } catch (error) {
+            showDataStatus('❌ Error parsing CSV: ' + error.message, 'error');
+        }
+    };
+    
+    reader.readAsText(file);
+}
+
+function parseCSV(text) {
+    const lines = text.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const data = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const values = lines[i].split(',');
+        const row = {};
+        
+        headers.forEach((header, index) => {
+            row[header] = parseFloat(values[index]) || values[index];
+        });
+        
+        data.push(row);
+    }
+    
+    return data;
+}
+
+function showDataStatus(message, type) {
+    const statusDiv = document.getElementById('data-status');
+    statusDiv.textContent = message;
+    statusDiv.className = 'data-status ' + type;
+}
+
+function analyzeImportedData(data) {
+    if (data.length === 0) return;
+    
+    // Calculate statistics
+    const temps = data.map(d => d.Temperature || d.Stack_Temp_C || 75);
+    const avgTemp = temps.reduce((a,b) => a+b, 0) / temps.length;
+    
+    addLog(`Analyzed data: Avg Temperature = ${avgTemp.toFixed(1)}°C`);
+}
+// ========================================
+// ANOMALY DETECTION SYSTEM
+// ========================================
+
+function detectAnomalies(temp, pressure, efficiency, flow, purity) {
+    // Calculate anomaly score based on parameter deviations
+    
+    // Define normal ranges
+    const normalRanges = {
+        temp: { min: 65, max: 80, ideal: 72 },
+        pressure: { min: 20, max: 32, ideal: 28 },
+        efficiency: { min: 65, max: 75, ideal: 70 },
+        flow: { min: 800, max: 2000, ideal: 1200 },
+        purity: { min: 99.9, max: 100, ideal: 99.97 }
+    };
+    
+    // Calculate deviation scores (0 = normal, 1 = extreme anomaly)
+    const scores = {
+        temp: calculateDeviation(temp, normalRanges.temp),
+        pressure: calculateDeviation(pressure, normalRanges.pressure),
+        efficiency: calculateDeviation(efficiency, normalRanges.efficiency),
+        flow: calculateDeviation(flow, normalRanges.flow),
+        purity: calculateDeviation(purity, normalRanges.purity)
+    };
+    
+    // Overall anomaly score (weighted average)
+    const overallScore = (
+        scores.temp * 0.3 +
+        scores.pressure * 0.25 +
+        scores.efficiency * 0.2 +
+        scores.flow * 0.15 +
+        scores.purity * 0.1
+    );
+    
+    // Identify which parameters are anomalous
+    const anomalousParams = [];
+    if (scores.temp > 0.5) anomalousParams.push({ name: 'Temperature', score: scores.temp, value: temp });
+    if (scores.pressure > 0.5) anomalousParams.push({ name: 'Pressure', score: scores.pressure, value: pressure });
+    if (scores.efficiency > 0.5) anomalousParams.push({ name: 'Efficiency', score: scores.efficiency, value: efficiency });
+    if (scores.flow > 0.5) anomalousParams.push({ name: 'Flow Rate', score: scores.flow, value: flow });
+    if (scores.purity > 0.5) anomalousParams.push({ name: 'Purity', score: scores.purity, value: purity });
+    
+    return {
+        score: overallScore,
+        isAnomaly: overallScore > state.anomalyThreshold,
+        anomalousParams: anomalousParams,
+        allScores: scores
+    };
+}
+
+function calculateDeviation(value, range) {
+    // Returns 0-1 score: 0 = within range, 1 = extreme deviation
+    
+    if (value >= range.min && value <= range.max) {
+        // Within range - check how far from ideal
+        const distanceFromIdeal = Math.abs(value - range.ideal);
+        const rangeWidth = range.max - range.min;
+        return Math.min((distanceFromIdeal / rangeWidth) * 0.5, 0.5);
+    } else {
+        // Outside range - calculate how far outside
+        if (value < range.min) {
+            const deviation = range.min - value;
+            return Math.min(0.5 + (deviation / range.min) * 0.5, 1.0);
+        } else {
+            const deviation = value - range.max;
+            return Math.min(0.5 + (deviation / range.max) * 0.5, 1.0);
+        }
+    }
+}
+
+function updateAnomalyDisplay(anomalyResult) {
+    const indicator = document.getElementById('anomaly-indicator');
+    const scoreDisplay = document.getElementById('anomaly-score');
+    const scoreFill = document.getElementById('score-fill');
+    const details = document.getElementById('anomaly-details');
+    
+    // Update score
+    scoreDisplay.textContent = anomalyResult.score.toFixed(2);
+    scoreFill.style.width = (anomalyResult.score * 100) + '%';
+    
+    // Update status
+    if (anomalyResult.isAnomaly) {
+        indicator.textContent = '⚠️ ANOMALY DETECTED';
+        indicator.className = 'status-indicator-ai anomaly-detected';
+        
+        // Show details
+        let detailsHTML = '<strong>Anomalous Parameters:</strong><br>';
+        anomalyResult.anomalousParams.forEach(param => {
+            detailsHTML += `• ${param.name}: ${param.value.toFixed(1)} (Score: ${param.score.toFixed(2)})<br>`;
+        });
+        
+        if (anomalyResult.anomalousParams.length === 0) {
+            detailsHTML += 'Multiple parameters showing unusual patterns';
+        }
+        
+        details.innerHTML = detailsHTML;
+        
+        // Log anomaly
+        addLog('🔍 Anomaly detected - Score: ' + anomalyResult.score.toFixed(2), 'warning');
+        
+    } else {
+        indicator.textContent = '● NORMAL';
+        indicator.className = 'status-indicator-ai';
+        details.textContent = 'All parameters within normal range';
+    }
+}
+// ========================================
+// AI OPTIMIZATION ADVISOR
+// ========================================
+
+function generateOptimizationRecommendation(currentState) {
+    const { solar, wind, grid, load, efficiency, cost, carbon } = currentState;
+    
+    const totalPower = solar + wind + grid;
+    const renewablePercent = ((solar + wind) / totalPower) * 100;
+    
+    // Decision tree logic for optimization
+    let recommendation = null;
+    
+    // Scenario 1: High grid usage - expensive
+    if (grid > 30 && (solar + wind) > 50) {
+        const suggestedLoad = Math.floor(load * 0.85);
+        const expectedCost = cost * 0.88;
+        const expectedCarbon = carbon * 0.75;
+        
+        recommendation = {
+            action: `Reduce load to ${suggestedLoad}%`,
+            reason: 'High grid cost detected. Abundant renewable available.',
+            currentMetrics: { load, cost, carbon, renewablePercent },
+            expectedMetrics: {
+                load: suggestedLoad,
+                cost: expectedCost,
+                carbon: expectedCarbon,
+                renewablePercent: 95
+            },
+            savings: {
+                daily: 18500,
+                annual: 67.5
+            },
+            type: 'cost-reduction'
+        };
+    }
+    // Scenario 2: Low renewable, high load - efficiency issue
+    else if (renewablePercent < 60 && load > 85) {
+        const suggestedLoad = 75;
+        const expectedEfficiency = efficiency + 1.5;
+        const expectedCost = cost * 0.93;
+        
+        recommendation = {
+            action: `Reduce load to ${suggestedLoad}%`,
+            reason: 'Low renewable availability. Reduce load for better efficiency.',
+            currentMetrics: { load, efficiency, cost, renewablePercent },
+            expectedMetrics: {
+                load: suggestedLoad,
+                efficiency: expectedEfficiency,
+                cost: expectedCost,
+                renewablePercent: renewablePercent
+            },
+            savings: {
+                daily: 12000,
+                annual: 43.8
+            },
+            type: 'efficiency-optimization'
+        };
+    }
+    // Scenario 3: Good renewable, low load - increase production
+    else if (renewablePercent > 85 && load < 75 && (solar + wind) > 100) {
+        const suggestedLoad = Math.min(load + 15, 95);
+        const expectedProduction = 1600;
+        const expectedCarbon = carbon * 0.9;
+        
+        recommendation = {
+            action: `Increase load to ${suggestedLoad}%`,
+            reason: 'Excellent renewable availability. Maximize green production.',
+            currentMetrics: { load, carbon, renewablePercent },
+            expectedMetrics: {
+                load: suggestedLoad,
+                production: expectedProduction,
+                carbon: expectedCarbon,
+                renewablePercent: renewablePercent
+            },
+            savings: {
+                daily: -5000,
+                annual: -18.3
+            },
+            benefit: 'Increased production: +250 kg/hr H₂',
+            type: 'production-maximization'
+        };
+    }
+    // Scenario 4: Optimal - maintain current
+    else {
+        recommendation = {
+            action: 'Maintain current operation',
+            reason: 'System operating optimally for current conditions.',
+            currentMetrics: { load, efficiency, cost, carbon, renewablePercent },
+            expectedMetrics: null,
+            savings: null,
+            type: 'optimal'
+        };
+    }
+    
+    return recommendation;
+}
+
+function updateOptimizationDisplay(recommendation) {
+    const header = document.getElementById('rec-header');
+    const content = document.getElementById('rec-content');
+    const impact = document.getElementById('rec-impact');
+    
+    if (!recommendation) {
+        header.textContent = '🤖 Analyzing...';
+        content.textContent = 'Waiting for sufficient data';
+        impact.innerHTML = '';
+        return;
+    }
+    
+    // Update header
+    header.textContent = '💡 ' + recommendation.action;
+    
+    // Update content
+    let contentHTML = `<strong>Reason:</strong> ${recommendation.reason}<br><br>`;
+    
+    if (recommendation.type !== 'optimal') {
+        contentHTML += '<strong>Current:</strong> ';
+        contentHTML += `Load ${recommendation.currentMetrics.load}% | `;
+        contentHTML += `Cost ₹${recommendation.currentMetrics.cost.toFixed(0)}/kg | `;
+        contentHTML += `Renewable ${recommendation.currentMetrics.renewablePercent.toFixed(0)}%`;
+    } else {
+        contentHTML += 'All metrics within optimal range. No changes recommended.';
+    }
+    
+    content.innerHTML = contentHTML;
+    
+    // Update impact
+    if (recommendation.expectedMetrics && recommendation.type !== 'optimal') {
+        const costChange = ((recommendation.expectedMetrics.cost - recommendation.currentMetrics.cost) / recommendation.currentMetrics.cost * 100);
+        const carbonChange = recommendation.expectedMetrics.carbon ? 
+            ((recommendation.expectedMetrics.carbon - recommendation.currentMetrics.carbon) / recommendation.currentMetrics.carbon * 100) : 0;
+        
+        impact.innerHTML = `
+            <div class="impact-item">
+                <div class="impact-label">Cost Impact</div>
+                <div class="impact-value">₹${recommendation.expectedMetrics.cost.toFixed(0)}/kg</div>
+                <div class="impact-change ${costChange < 0 ? 'positive' : 'negative'}">
+                    ${costChange > 0 ? '+' : ''}${costChange.toFixed(1)}%
+                </div>
+            </div>
+            <div class="impact-item">
+                <div class="impact-label">Daily Savings</div>
+                <div class="impact-value">₹${Math.abs(recommendation.savings.daily).toLocaleString()}</div>
+                <div class="impact-change ${recommendation.savings.daily > 0 ? 'positive' : 'negative'}">
+                    Annual: ₹${Math.abs(recommendation.savings.annual).toFixed(1)}L
+                </div>
+            </div>
+            <div class="impact-item">
+                <div class="impact-label">Carbon Impact</div>
+                <div class="impact-value">${recommendation.expectedMetrics.carbon ? recommendation.expectedMetrics.carbon.toFixed(2) : 'N/A'}</div>
+                <div class="impact-change ${carbonChange < 0 ? 'positive' : 'negative'}">
+                    ${carbonChange !== 0 ? (carbonChange > 0 ? '+' : '') + carbonChange.toFixed(1) + '%' : 'No change'}
+                </div>
+            </div>
+        `;
+    } else {
+        impact.innerHTML = '';
+    }
+}
 // Setup Charts
 function setupCharts() {
     const ctx1 = document.getElementById('chart1').getContext('2d');
