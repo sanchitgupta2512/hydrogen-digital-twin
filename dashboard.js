@@ -434,55 +434,82 @@ function calculateCarbonIntensity(gridPower, totalPower, h2Production) {
  * LCOH = (CAPEX_annualized + OPEX) / Annual_Production
  */
 function calculateLCOH(powerInput, h2Production, efficiency, gridFraction) {
-    // ===== CAPITAL COSTS (CAPEX) =====
-    const electrolyzerCapacityCost = 800; // ₹/kW (₹80,000/kW = ₹800/kW for 100 MW scale)
-    const electrolyzerCAPEX = state.plantCapacity * 1000 * electrolyzerCapacityCost; // ₹
-    
-    const balanceOfPlantCAPEX = electrolyzerCAPEX * 0.35; // 35% of electrolyzer cost
-    const installationCAPEX = electrolyzerCAPEX * 0.15; // 15% installation
+
+    // ===== CAPEX =====
+    const electrolyzerCapacityCost = 80000; // ₹/kW realistic
+    const electrolyzerCAPEX = state.plantCapacity * 1000 * electrolyzerCapacityCost;
+
+    const balanceOfPlantCAPEX = electrolyzerCAPEX * 0.35;
+    const installationCAPEX = electrolyzerCAPEX * 0.15;
+
     const totalCAPEX = electrolyzerCAPEX + balanceOfPlantCAPEX + installationCAPEX;
-    
-    // Annualization (20-year lifetime, 8% discount rate)
-    const lifetime = 20; // years
+
+    const lifetime = 20;
     const discountRate = 0.08;
-    const CRF = (discountRate * Math.pow(1 + discountRate, lifetime)) / 
+
+    const CRF = (discountRate * Math.pow(1 + discountRate, lifetime)) /
                 (Math.pow(1 + discountRate, lifetime) - 1);
+
     const annualizedCAPEX = totalCAPEX * CRF;
-    
-    // ===== OPERATING COSTS (OPEX) - Annual =====
-    
-    // 1. Electricity Cost (largest component: ~70-80%)
-    const annualOperatingHours = 8000; // hours (91% capacity factor)
-    const avgElectricityPrice = 4.2; // ₹/kWh (mix of renewable + grid)
-    const annualElectricityCost = powerInput * 1000 * annualOperatingHours * avgElectricityPrice;
-    
-    // 2. Water Cost
+
+
+    // ===== OPEX =====
+    const annualOperatingHours = 8000;
+
+    // electricity price weighted by grid fraction
+    const renewablePrice = 2.5;
+    const gridPrice = 6;
+
+    const avgElectricityPrice =
+        renewablePrice * (1 - gridFraction) +
+        gridPrice * gridFraction;
+
+    // specific energy consumption
+    const specificEnergy = 52; // kWh/kg realistic PEM
+
+    const annualProduction = h2Production * annualOperatingHours;
+
+    const annualElectricityCost =
+        annualProduction * specificEnergy * avgElectricityPrice;
+
+
+    // water cost
     const waterConsumption = calculateWaterConsumption(h2Production);
-    const annualWaterCost = waterConsumption.totalFlow * annualOperatingHours * 0.05; // ₹0.05/L
-    
-    // 3. Maintenance Cost (stack replacement every 60,000 hrs)
-    const stackReplacementCost = electrolyzerCAPEX * 0.4; // 40% of electrolyzer cost
-    const stackLifetime = 60000; // hours
-    const annualMaintenanceCost = (stackReplacementCost / stackLifetime) * annualOperatingHours + 
-                                   (totalCAPEX * 0.02); // + 2% routine maintenance
-    
-    // 4. Labor Cost
+    const annualWaterCost =
+        waterConsumption.totalFlow * annualOperatingHours * 0.002;
+
+
+    // maintenance
+    const annualMaintenanceCost =
+        totalCAPEX * 0.03;
+
+
+    // labor
     const operatorsPerShift = 2;
     const shiftsPerDay = 3;
-    const annualSalaryPerOperator = 800000; // ₹8L/year
-    const annualLaborCost = operatorsPerShift * shiftsPerDay * annualSalaryPerOperator;
-    
-    // 5. Insurance & Overhead
-    const annualInsurance = totalCAPEX * 0.01; // 1% of CAPEX
-    
-    const totalOPEX = annualElectricityCost + annualWaterCost + annualMaintenanceCost + 
-                      annualLaborCost + annualInsurance;
-    
-    // ===== LCOH CALCULATION =====
-    const annualProduction = h2Production * annualOperatingHours; // kg/year
-    const LCOH = (annualizedCAPEX + totalOPEX) / annualProduction; // ₹/kg
-    
-    // Cost breakdown percentages
+    const annualSalaryPerOperator = 800000;
+
+    const annualLaborCost =
+        operatorsPerShift * shiftsPerDay * annualSalaryPerOperator;
+
+
+    // insurance
+    const annualInsurance = totalCAPEX * 0.01;
+
+
+    const totalOPEX =
+        annualElectricityCost +
+        annualWaterCost +
+        annualMaintenanceCost +
+        annualLaborCost +
+        annualInsurance;
+
+
+    const LCOH =
+        (annualizedCAPEX + totalOPEX) /
+        annualProduction;
+
+
     const breakdown = {
         electricity: (annualElectricityCost / totalOPEX) * 100,
         water: (annualWaterCost / totalOPEX) * 100,
@@ -490,11 +517,11 @@ function calculateLCOH(powerInput, h2Production, efficiency, gridFraction) {
         labor: (annualLaborCost / totalOPEX) * 100,
         insurance: (annualInsurance / totalOPEX) * 100
     };
-    
+
     return {
         lcoh: LCOH,
-        capex: totalCAPEX / 10000000, // Crores
-        opex: totalOPEX / 10000000, // Crores/year
+        capex: totalCAPEX / 10000000,
+        opex: totalOPEX / 10000000,
         breakdown: breakdown
     };
 }
