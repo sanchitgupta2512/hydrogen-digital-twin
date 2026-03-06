@@ -1042,6 +1042,42 @@ function handleDataUpload() {
     reader.readAsText(file);
 }
 
+function detectColumnType(header, values){
+
+    const name = header.toLowerCase();
+
+    const avg = values.reduce((a,b)=>a+b,0) / values.length;
+
+    if(name.includes("temp")) return "Temperature";
+    if(name.includes("press")) return "Pressure";
+    if(name.includes("eff")) return "Efficiency";
+    if(name.includes("flow") || name.includes("h2")) return "Flow";
+
+    if(avg > 50 && avg < 100) return "Temperature";
+    if(avg > 10 && avg < 60) return "Pressure";
+    if(avg > 50 && avg < 80) return "Efficiency";
+
+    return header;
+}
+
+function inferSchema(headers, rows){
+
+    const mapping = {};
+
+    headers.forEach((header,i)=>{
+
+        const values = rows
+            .map(r => parseFloat(r[i]))
+            .filter(v => !isNaN(v))
+            .slice(0,30);
+
+        mapping[header] = detectColumnType(header, values);
+
+    });
+
+    return mapping;
+}
+
 function parseCSV(text) {
 
     const lines = text.trim().split('\n');
