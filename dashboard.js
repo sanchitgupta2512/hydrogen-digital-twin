@@ -1043,22 +1043,34 @@ function handleDataUpload() {
 }
 
 function parseCSV(text) {
+
     const lines = text.trim().split('\n');
     const headers = lines[0].split(',').map(h => h.trim());
+    const rows = lines.slice(1).map(r => r.split(','));
+
+    const schema = inferSchema(headers, rows);
+
     const data = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        const values = lines[i].split(',');
-        const row = {};
-        
-        headers.forEach((header, index) => {
-            const value = values[index].trim();
-            row[header] = isNaN(value) ? value : parseFloat(value);
+
+    rows.forEach(row => {
+
+        const obj = {};
+
+        headers.forEach((h,i)=>{
+
+            const value = parseFloat(row[i]);
+            const mapped = schema[h];
+
+            if(!isNaN(value)) obj[mapped] = value;
+
         });
-        
-        data.push(row);
-    }
-    
+
+        data.push(obj);
+
+    });
+
+    console.log("Detected schema:", schema);
+
     return data;
 }
 
