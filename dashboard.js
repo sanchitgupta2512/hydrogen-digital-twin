@@ -34,7 +34,8 @@ let state = {
     
     // Imported Data
     importedData: null,
-    currentDataMode: false,     // true when viewing imported data
+    currentDataMode: false,
+    importIndex: 0,             // true when viewing imported data
     
     // Alarms
     alarms: [],
@@ -533,8 +534,8 @@ function updateDisplay() {
     const powerConditioned = totalPower * 0.98; // MW
     
     // Calculate stack temperature and pressure
-    const stackTemp = calculateStackTemperature(powerConditioned, state.load);
-    const stackPressure = calculateStackPressure(state.load);
+    const stackTemp = state.stackTemp || calculateStackTemperature(powerConditioned, state.load);
+    const stackPressure = state.stackPressure || calculateStackPressure(state.load);
     
     // Calculate hydrogen production (using thermodynamic model)
     const productionData = calculateH2Production(powerConditioned, state.load, stackTemp, stackPressure);
@@ -1031,7 +1032,11 @@ function handleDataUpload() {
             addLog(`📊 CSV data imported - ${data.length} records`);
             
             // Analyze imported data
-            analyzeImportedData(data);
+            state.importedData = data;
+            state.currentDataMode = true;
+            state.importIndex = 0;
+
+            runImportedDataset();
             
         } catch (error) {
             showDataStatus('❌ Error parsing CSV: ' + error.message, 'error');
@@ -1142,6 +1147,35 @@ function analyzeImportedData(data) {
     
     // TODO: Display imported data in charts and metrics
     // For now, just log the statistics
+}
+
+function runImportedDataset(){
+
+    if(!state.importedData) return;
+    clearInterval(interval);
+    interval = setInterval(()=>{
+
+        const row = state.importedData[state.importIndex];
+
+        if(row.Temperature){
+            state.stackTemp = row.Temperature;
+        }
+
+        if(row.Pressure){
+            state.stackPressure = row.Pressure;
+        }
+
+        updateDisplay();
+
+        state.importIndex++;
+
+        if(state.importIndex >= state.importedData.length){
+            clearInterval(interval);
+            addLog("Dataset playback finished");
+        }
+
+    },2000);
+
 }
 
 // ========================================
