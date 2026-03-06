@@ -1092,7 +1092,7 @@ function inferSchema(headers, rows){
 
 function parseCSV(text) {
 
-    const lines = text.trim().split('\n');
+    const lines = text.trim().split(/\r?\n/);
     const headers = lines[0].split(',').map(h => h.trim());
     const rows = lines.slice(1).map(r => r.split(','));
 
