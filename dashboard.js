@@ -14,18 +14,18 @@ let state = {
     // Simulation State
     running: false,
     time: 0,
-    solar: 60,      // MW
-    wind: 40,       // MW
+    solar: 15,      // MW
+    wind: 8,       // MW
     grid: 0,        // MW
     load: 80,       // % (20-100%)
     operatingMode: 'optimal', // 'optimal', 'cost', 'carbon'
     
     // Plant Characteristics (Industry Standard)
-    plantCapacity: 100,         // MW rated capacity
-    electrolyzerType: 'PEM',    // PEM electrolyzer
-    stackArea: 1000,            // cm² active area per cell
-    numberOfCells: 250,         // cells per stack
-    numberOfStacks: 4,          // parallel stacks
+    plantCapacity: 10,         // MW rated capacity
+    electrolyzerType: 'Alkaline',    // alkaline electrolyzer
+    stackArea: 11000,            // cm² active area per cell
+    numberOfCells: 120,         // cells per stack
+    numberOfStacks: 20,          // parallel stacks
     
     // Operating Data
     operatingHours: 0,
@@ -159,17 +159,17 @@ function resetSimulation() {
     state.running = false;
     state.time = 0;
     state.operatingHours = 0;
-    state.solar = 60;
-    state.wind = 40;
+    state.solar = 15;
+    state.wind = 8;
     state.grid = 0;
     state.load = 80;
     state.dataHistory = [];
     state.currentDataMode = false;
     
-    document.getElementById('solar').value = 60;
-    document.getElementById('solar-val').textContent = '60';
-    document.getElementById('wind').value = 40;
-    document.getElementById('wind-val').textContent = '40';
+    document.getElementById('solar').value = 15;
+    document.getElementById('solar-val').textContent = '15';
+    document.getElementById('wind').value = 8;
+    document.getElementById('wind-val').textContent = '8';
     document.getElementById('grid').value = 0;
     document.getElementById('grid-val').textContent = '0';
     document.getElementById('load').value = 80;
@@ -274,7 +274,7 @@ function calculateH2Production(powerInput, load, temp, pressure) {
     const effectivePower = powerInput * loadFraction;
 
     // realistic PEM energy consumption
-    const specificEnergy = 52; // kWh/kg
+    const specificEnergy = 55+(1- loadFraction)*5; // kWh/kg
 
     // hydrogen production
     const production = (effectivePower * 1000) / specificEnergy; // kg/hr
@@ -305,7 +305,7 @@ function calculateStackTemperature(powerInput, load, ambientTemp = 25) {
     const loadFraction = load / 100;
     
     // Base temperature (operating point at low load)
-    const T_base = 60; // °C
+    const T_base = 65; // °C
     
     // Heat generation per unit load
     // Based on: Q = (V_actual - V_tn) * I
@@ -314,7 +314,7 @@ function calculateStackTemperature(powerInput, load, ambientTemp = 25) {
     const heatGenPerAmp = (actualVoltage - thermoneutralVoltage);
     
     // Temperature rise
-    const deltaT = loadFraction * 25; // Up to 25°C rise at full load
+    const deltaT = loadFraction * 10; // Up to 10°C rise at full load
     
     // Final temperature
     const T_stack = T_base + deltaT + (Math.random() * 3 - 1.5); // ±1.5°C noise
@@ -330,10 +330,10 @@ function calculateStackPressure(load) {
     const loadFraction = load / 100;
     
     // Base pressure
-    const P_base = 20; // bar
+    const P_base = 25; // bar
     
     // Pressure increases with production rate
-    const P_operating = P_base + (loadFraction * 15); // Up to 35 bar at full load
+    const P_operating = P_base + (loadFraction * 5); // Up to 35 bar at full load
     
     return P_operating + (Math.random() * 1 - 0.5); // ±0.5 bar noise
 }
@@ -380,7 +380,7 @@ function calculateSpecificEnergy(powerConsumed, h2Production) {
  */
 function calculateWaterConsumption(h2Production) {
 
-    const waterPerKgH2 = 9; // kg water per kg H2
+    const waterPerKgH2 = 13.2; // kg water per kg H2
 
     const waterRequired = h2Production * waterPerKgH2;
 
@@ -450,8 +450,8 @@ function calculateLCOH(powerInput, h2Production, efficiency, gridFraction) {
     const annualOperatingHours = 8000;
 
     // electricity price weighted by grid fraction
-    const renewablePrice = 2.5;
-    const gridPrice = 6;
+    const renewablePrice = 2.2;
+    const gridPrice = 6.5;
 
     const avgElectricityPrice =
         renewablePrice * (1 - gridFraction) +
@@ -560,7 +560,7 @@ function updateDisplay() {
     
     // Storage calculation
     const storageLevel = Math.min(95, 65 + (state.time / 200)); // Simplified
-    const storageCapacity = 3200; // kg total capacity
+    const storageCapacity = 1000; // kg total capacity
     const storedH2 = (storageLevel / 100) * storageCapacity; // kg
     
     // ===== UPDATE DISPLAY ELEMENTS =====
@@ -568,7 +568,7 @@ function updateDisplay() {
     // Plant Process Flow
     document.getElementById('power-cond').textContent = powerConditioned.toFixed(1) + ' MW';
     document.getElementById('h2-prod').textContent = h2Production.toFixed(0) + ' kg/hr';
-    document.getElementById('pressure').textContent = '350 bar'; // Final compression
+    document.getElementById('pressure').textContent = '200 bar'; // Final compression
     document.getElementById('storage').textContent = storageLevel.toFixed(0) + '%';
     document.getElementById('storage-kg').textContent = storedH2.toFixed(0) + ' kg';
     
@@ -585,7 +585,7 @@ function updateDisplay() {
     
     // KPIs
     const dailyProduction = (h2Production * 24) / 1000; // tonnes/day
-    const capacityFactor = (state.load * 0.85).toFixed(1); // Simplified
+    const capacityFactor = 51; // Simplified
     const operatingCost = (specificEnergy * 4.2).toFixed(2); // ₹/kg (electricity cost only)
     
     document.getElementById('prod').textContent = dailyProduction.toFixed(2) + ' tonnes';
