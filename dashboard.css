@@ -264,6 +264,13 @@ button {
     padding: 20px;
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    height: 400px; /* ADDED: Fixed height */
+    position: relative; /* ADDED: For canvas positioning */
+}
+
+.chart-box canvas {
+    max-height: 350px !important; /* ADDED: Constrain canvas */
+    width: 100% !important;
 }
 
 .chart-box h3 {
@@ -624,4 +631,25 @@ button {
 
 .impact-change.negative {
     color: #DC2626;
+}
+/* FIX: Prevent layout shift and vibration */
+.metric-value, .metric-title, #temp, #stack-pressure, 
+#flow, #efficiency, #specific, #carbon {
+    min-width: 120px; /* Prevents width jumping */
+    display: inline-block;
+}
+
+.plant-flow span {
+    min-width: 80px; /* Prevents width jumping */
+    display: inline-block;
+}
+
+/* FIX: Smooth transitions instead of instant updates */
+.metric-value, .flow-item span, .status-indicator {
+    transition: all 0.3s ease;
+}
+
+/* FIX: Prevent entire page from shifting */
+body {
+    overflow-y: scroll; /* Force scrollbar to always show */
 }
