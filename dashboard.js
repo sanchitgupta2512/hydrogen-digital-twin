@@ -770,10 +770,10 @@ function updateAlarmDisplay(alarms) {
 // ========================================
 function detectAnomalies(temp, pressure, efficiency, flow, purity) {
     const normalRanges = {
-        temp: { min: 65, max: 80, ideal: 72 },
+        temp: { min: 65, max: 75, ideal: 70 },
         pressure: { min: 20, max: 32, ideal: 28 },
-        efficiency: { min: 65, max: 75, ideal: 70 },
-        flow: { min: 800, max: 2000, ideal: 1400 }
+        efficiency: { min: 65, max: 75, ideal: 68 },
+        flow: { min: 40, max: 182, ideal: 140 }
     };
     
     const scores = {
@@ -786,15 +786,15 @@ function detectAnomalies(temp, pressure, efficiency, flow, purity) {
     const overallScore = (
         scores.temp * 0.35 +
         scores.pressure * 0.3 +
-        scores.efficiency * 0.25 +
-        scores.flow * 0.1
+        scores.efficiency * 0.20 +
+        scores.flow * 0.15
     );
     
     const anomalousParams = [];
-    if (scores.temp > 0.5) anomalousParams.push({ name: 'Temperature', score: scores.temp, value: temp });
-    if (scores.pressure > 0.5) anomalousParams.push({ name: 'Pressure', score: scores.pressure, value: pressure });
-    if (scores.efficiency > 0.5) anomalousParams.push({ name: 'Efficiency', score: scores.efficiency, value: efficiency });
-    if (scores.flow > 0.5) anomalousParams.push({ name: 'Flow Rate', score: scores.flow, value: flow });
+    if (scores.temp > 0.6) anomalousParams.push({ name: 'Temperature', score: scores.temp, value: temp });
+    if (scores.pressure > 0.6) anomalousParams.push({ name: 'Pressure', score: scores.pressure, value: pressure });
+    if (scores.efficiency > 0.6) anomalousParams.push({ name: 'Efficiency', score: scores.efficiency, value: efficiency });
+    if (scores.flow > 0.6) anomalousParams.push({ name: 'Flow Rate', score: scores.flow, value: flow });
     
     return {
         score: overallScore,
@@ -856,96 +856,103 @@ function updateAnomalyDisplay(anomalyResult) {
 // OPTIMIZATION ADVISOR
 // ========================================
 function generateOptimizationRecommendation(currentState) {
+
     const { solar, wind, grid, load, efficiency, cost, carbon } = currentState;
-    
+
     const totalPower = solar + wind + grid;
-    const renewablePercent = ((solar + wind) / totalPower) * 100;
-    
-    let recommendation = null;
-    
-    // Scenario 1: High grid usage with available renewable
-    if (grid > 30 && (solar + wind) > 50) {
-        const suggestedLoad = Math.floor(load * 0.85);
-        const expectedCost = cost * 0.88;
-        const expectedCarbon = carbon * 0.75;
-        
-        recommendation = {
-            action: `Reduce load to ${suggestedLoad}%`,
-            reason: 'High grid cost detected. Abundant renewable power available.',
-            currentMetrics: { load, cost, carbon, renewablePercent },
-            expectedMetrics: {
-                load: suggestedLoad,
-                cost: expectedCost,
-                carbon: expectedCarbon,
-                renewablePercent: 95
-            },
-            savings: {
-                daily: 18500,
-                annual: 67.5
-            },
-            type: 'cost-reduction'
+
+    if (totalPower === 0) {
+        return {
+            action: "Start renewable generation",
+            reason: "No power available to operate electrolyzer",
+            type: "warning"
         };
     }
-    // Scenario 2: Low renewable, high load
-    else if (renewablePercent < 60 && load > 85) {
-        const suggestedLoad = 75;
-        const expectedEfficiency = efficiency + 1.5;
-        const expectedCost = cost * 0.93;
-        
+
+    const renewablePower = solar + wind;
+    const renewablePercent = (renewablePower / totalPower) * 100;
+
+    let recommendation = null;
+
+    // Case 1 — Grid usage too high
+    if (grid > 1) {
+
+        const suggestedLoad = Math.max(60, load - 10);
+
         recommendation = {
             action: `Reduce load to ${suggestedLoad}%`,
-            reason: 'Low renewable availability. Operating at high load reduces efficiency.',
-            currentMetrics: { load, efficiency, cost, renewablePercent },
+            reason: "Grid consumption exceeds 10% target. Reduce load until renewable availability improves.",
+            currentMetrics: { load, renewablePercent, cost },
             expectedMetrics: {
                 load: suggestedLoad,
-                efficiency: expectedEfficiency,
-                cost: expectedCost,
+                renewablePercent: renewablePercent + 5,
+                cost: cost * 0.92
+            },
+            savings: {
+                daily: 3500,
+                annual: 12.8
+            },
+            type: "cost-reduction"
+        };
+
+    }
+
+    // Case 2 — Low renewable availability
+    else if (renewablePower < 8 && load > 80) {
+
+        const suggestedLoad = 70;
+
+        recommendation = {
+            action: `Reduce load to ${suggestedLoad}%`,
+            reason: "Renewable power insufficient for current electrolyzer load.",
+            currentMetrics: { load, efficiency, renewablePercent },
+            expectedMetrics: {
+                load: suggestedLoad,
+                efficiency: efficiency + 1.5,
                 renewablePercent: renewablePercent
             },
             savings: {
-                daily: 12000,
-                annual: 43.8
+                daily: 2200,
+                annual: 8.1
             },
-            type: 'efficiency-optimization'
+            type: "efficiency-optimization"
         };
+
     }
-    // Scenario 3: Excellent renewable, low load
-    else if (renewablePercent > 85 && load < 75 && (solar + wind) > 100) {
-        const suggestedLoad = Math.min(load + 15, 95);
-        const expectedCarbon = carbon * 0.9;
-        
+
+    // Case 3 — Excess renewable power available
+    else if (renewablePower > 20 && load < 90) {
+
+        const suggestedLoad = Math.min(load + 10, 95);
+
         recommendation = {
             action: `Increase load to ${suggestedLoad}%`,
-            reason: 'Excellent renewable availability. Maximize green hydrogen production.',
-            currentMetrics: { load, carbon, renewablePercent },
+            reason: "High renewable availability detected. Increase hydrogen production.",
+            currentMetrics: { load, renewablePercent },
             expectedMetrics: {
                 load: suggestedLoad,
-                carbon: expectedCarbon,
                 renewablePercent: renewablePercent
             },
-            savings: {
-                daily: -5000,
-                annual: -18.3
-            },
-            benefit: 'Increased production: +250 kg/hr H₂',
-            type: 'production-maximization'
+            benefit: "Higher hydrogen production (~+20 kg/hr)",
+            type: "production-maximization"
         };
+
     }
-    // Scenario 4: Optimal operation
+
+    // Case 4 — Optimal operation
     else {
+
         recommendation = {
-            action: 'Maintain current operation',
-            reason: 'System operating optimally for current conditions.',
-            currentMetrics: { load, efficiency, cost, carbon, renewablePercent },
-            expectedMetrics: null,
-            savings: null,
-            type: 'optimal'
+            action: "Maintain current operation",
+            reason: "Electrolyzer operating within optimal renewable conditions.",
+            currentMetrics: { load, efficiency, renewablePercent },
+            type: "optimal"
         };
+
     }
-    
+
     return recommendation;
 }
-
 function updateOptimizationDisplay(recommendation) {
     const header = document.getElementById('rec-header');
     const content = document.getElementById('rec-content');
