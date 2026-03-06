@@ -624,6 +624,10 @@ function updateDisplay() {
         // Anomaly Detection
         const anomalyResult = detectAnomalies(stackTemp, stackPressure, systemEfficiency, h2Production, 99.97);
         updateAnomalyDisplay(anomalyResult);
+
+        // Predictive Maintenance
+        const healthPrediction = predictStackHealth(state.dataHistory);
+        updatePredictiveMaintenanceUI(healthPrediction);
         
         // Optimization Advisor
         const recommendation = generateOptimizationRecommendation({
@@ -820,6 +824,61 @@ function calculateDeviation(value, range) {
     }
 }
 
+// ========================================
+// PREDICTIVE MAINTENANCE SYSTEM
+// ========================================
+function predictStackHealth(history){
+
+    if(history.length < 15){
+        return {
+            status: "INSUFFICIENT DATA",
+            risk: "low",
+            message: "Collecting operational data..."
+        };
+    }
+
+    const recent = history.slice(-15);
+
+    const startEff = recent[0].efficiency;
+    const endEff = recent[recent.length-1].efficiency;
+
+    const startTemp = recent[0].temp;
+    const endTemp = recent[recent.length-1].temp;
+
+    const efficiencyDrop = startEff - endEff;
+    const tempRise = endTemp - startTemp;
+
+    // Risk evaluation
+    if(efficiencyDrop > 2.5 || tempRise > 4){
+
+        return {
+            status: "HIGH RISK",
+            risk: "critical",
+            message: "Possible membrane degradation or catalyst poisoning",
+            recommendation: "Schedule stack inspection within 48 hours"
+        };
+
+    }
+
+    if(efficiencyDrop > 1.5 || tempRise > 2){
+
+        return {
+            status: "MODERATE RISK",
+            risk: "warning",
+            message: "Performance drift detected",
+            recommendation: "Monitor stack voltage and cooling system"
+        };
+
+    }
+
+    return {
+        status: "NORMAL",
+        risk: "safe",
+        message: "Stack health stable",
+        recommendation: "No maintenance required"
+    };
+}
+
 function updateAnomalyDisplay(anomalyResult) {
     const indicator = document.getElementById('anomaly-indicator');
     const scoreDisplay = document.getElementById('anomaly-score');
@@ -850,6 +909,28 @@ function updateAnomalyDisplay(anomalyResult) {
         indicator.className = 'status-indicator-ai';
         details.textContent = 'All parameters within normal range';
     }
+}
+
+function updatePredictiveMaintenanceUI(result){
+
+    const statusEl = document.getElementById("maintenance-status");
+    const messageEl = document.getElementById("maintenance-message");
+
+    if(!statusEl || !messageEl) return;
+
+    statusEl.textContent = result.status;
+    messageEl.textContent = result.message;
+
+    if(result.risk === "critical"){
+        statusEl.className = "status-indicator status-critical";
+    }
+    else if(result.risk === "warning"){
+        statusEl.className = "status-indicator status-warning";
+    }
+    else{
+        statusEl.className = "status-indicator status-normal";
+    }
+
 }
 
 // ========================================
