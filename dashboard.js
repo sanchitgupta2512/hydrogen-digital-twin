@@ -266,43 +266,33 @@ function calculateCellVoltage(temp, pressure, currentDensity) {
     };
 }
 
-/**
- * Calculate Hydrogen Production using Faraday's Law
- * m_H2 = (I * t * M_H2) / (z * F * η_F)
- */
 function calculateH2Production(powerInput, load, temp, pressure) {
-    // Current density based on load
+
     const loadFraction = load / 100;
-    const maxCurrentDensity = 2.0; // A/cm² at 100% load
+
+    // effective power to electrolyzer
+    const effectivePower = powerInput * loadFraction;
+
+    // realistic PEM energy consumption
+    const specificEnergy = 52; // kWh/kg
+
+    // hydrogen production
+    const production = (effectivePower * 1000) / specificEnergy; // kg/hr
+
+    // approximate current density scaling
+    const maxCurrentDensity = 2.0;
     const currentDensity = maxCurrentDensity * loadFraction;
-    
-    // Total current through all cells
-    const totalArea = state.stackArea * state.numberOfCells * state.numberOfStacks; // cm²
-    const totalCurrent = currentDensity * totalArea; // Amperes
-    
-    // Cell voltage calculation
-    const voltageData = calculateCellVoltage(temp, pressure, currentDensity);
-    const cellVoltage = voltageData.cellVoltage;
-    
-    // Power consumed by electrolyzer
-    const stackVoltage = cellVoltage * state.numberOfCells;
-    const actualPower = (stackVoltage * totalCurrent * state.numberOfStacks) / 1000000; // MW
-    
-    // Faraday efficiency (accounts for parasitic reactions)
-    // η_F = 1 - (a * i) where a is empirical constant
-    const faradayEfficiency = Math.max(0.95, 1 - (0.02 * currentDensity));
-    
-    // Hydrogen production rate using Faraday's law
-    // n_H2 = (I * η_F) / (z * F) where z = 2 (electrons per H2 molecule)
-    const n_H2_rate = (totalCurrent * faradayEfficiency) / (2 * CONSTANTS.FARADAY); // mol/s
-    const m_H2_rate = n_H2_rate * CONSTANTS.H2_MOLAR_MASS / 1000; // kg/s
-    const m_H2_hourly = m_H2_rate * 3600; // kg/hr
-    
+
+    // approximate cell voltage
+    const cellVoltage = 1.9 + (0.1 * loadFraction);
+
+    const faradayEfficiency = 0.96;
+
     return {
-        production: m_H2_hourly,
+        production: production,
         currentDensity: currentDensity,
         cellVoltage: cellVoltage,
-        stackPower: actualPower,
+        stackPower: effectivePower,
         faradayEfficiency: faradayEfficiency
     };
 }
@@ -376,29 +366,26 @@ function calculateSystemEfficiency(h2Production, powerConsumed, temp) {
  * SEC = E_consumed / m_H2 (kWh/kg)
  */
 function calculateSpecificEnergy(powerConsumed, h2Production) {
-    const SEC = (powerConsumed * 1000) / h2Production; // kWh/kg
-    
-    // Theoretical minimum: 39.4 kWh/kg (HHV)
-    // Real systems: 50-65 kWh/kg
+
+    if (h2Production <= 0) return 0;
+
+    const SEC = (powerConsumed * 1000) / h2Production;
+
     return SEC;
 }
-
 /**
  * Calculate Water Consumption
  * Stoichiometric: H2O → H2 + 0.5 O2
  * 2 moles H2O → 1 mole H2
  */
 function calculateWaterConsumption(h2Production) {
-    // Stoichiometric water requirement
-    const waterStoichiometric = (h2Production * CONSTANTS.H2O_MOLAR_MASS * 2) / CONSTANTS.H2_MOLAR_MASS;
-    
-    // System water efficiency (accounts for cooling, humidification losses)
-    const waterEfficiency = 0.92; // 92% efficient
-    
-    const waterRequired = waterStoichiometric / waterEfficiency; // kg/hr
-    const waterLiters = waterRequired; // L/hr (density ≈ 1 kg/L)
-    const waterPerKgH2 = waterLiters / h2Production; // L/kg H2
-    
+
+    const waterPerKgH2 = 9; // kg water per kg H2
+
+    const waterRequired = h2Production * waterPerKgH2;
+
+    const waterLiters = waterRequired;
+
     return {
         totalFlow: waterLiters,
         specificConsumption: waterPerKgH2
@@ -421,11 +408,17 @@ function calculateWasteHeat(powerInput, h2Production) {
  * CI = (E_grid * CI_grid) / m_H2
  */
 function calculateCarbonIntensity(gridPower, totalPower, h2Production) {
-    const gridFraction = gridPower / totalPower;
-    const gridEnergy = totalPower * 1000 * gridFraction; // kWh
-    const carbonEmissions = gridEnergy * CONSTANTS.GRID_CARBON_INTENSITY; // kg CO2
-    const carbonIntensity = carbonEmissions / h2Production; // kg CO2/kg H2
-    
+
+    if (h2Production <= 0) return 0;
+
+    const gridEnergy = gridPower * 1000;
+
+    const carbonEmissions =
+        gridEnergy * CONSTANTS.GRID_CARBON_INTENSITY;
+
+    const carbonIntensity =
+        carbonEmissions / h2Production;
+
     return carbonIntensity;
 }
 
